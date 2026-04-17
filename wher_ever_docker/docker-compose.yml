@@ -1,0 +1,110 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: wher-ever-mysql
+    restart: unless-stopped
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root123456
+      MYSQL_DATABASE: wher_ever
+      TZ: Asia/Shanghai
+    volumes:
+      - ./mysql/data:/var/lib/mysql
+      - ./mysql/conf:/etc/mysql/conf.d
+      - ./mysql/init:/docker-entrypoint-initdb.d
+    command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    networks:
+      - wher-ever-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: wher-ever-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./redis/data:/data
+      - ./redis/conf/redis.conf:/etc/redis/redis.conf
+    command: redis-server /etc/redis/redis.conf
+    networks:
+      - wher-ever-net
+
+  nacos:
+    image: nacos/nacos-server:v2.2.3
+    container_name: wher-ever-nacos
+    restart: unless-stopped
+    ports:
+      - "8848:8848"
+      - "9848:9848"
+    environment:
+      MODE: standalone
+      PREFER_HOST_MODE: hostname
+      SPRING_DATASOURCE_PLATFORM: mysql
+      MYSQL_SERVICE_HOST: mysql
+      MYSQL_SERVICE_PORT: 3306
+      MYSQL_SERVICE_USER: root
+      MYSQL_SERVICE_PASSWORD: root123456
+      MYSQL_SERVICE_DB_NAME: wher_ever
+      NACOS_AUTH_ENABLE: false
+      TZ: Asia/Shanghai
+    volumes:
+      - ./nacos/logs:/home/nacos/logs
+      - ./nacos/data:/home/nacos/data
+    depends_on:
+      - mysql
+    networks:
+      - wher-ever-net
+
+  rocketmq:
+    image: apache/rocketmq:5.1.0
+    container_name: wher-ever-rocketmq
+    restart: unless-stopped
+    ports:
+      - "9876:9876"
+      - "10911:10911"
+    environment:
+      TZ: Asia/Shanghai
+    volumes:
+      - ./rocketmq/store:/home/rocketmq/store
+      - ./rocketmq/logs:/home/rocketmq/logs
+      - ./rocketmq/conf/broker.conf:/home/rocketmq/conf/broker.conf
+    command: sh mqnamesrv
+    networks:
+      - wher-ever-net
+
+  rocketmq-dashboard:
+    image: apacherocketmq/rocketmq-dashboard:latest
+    container_name: wher-ever-rocketmq-dashboard
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      TZ: Asia/Shanghai
+      ROCKETMQ_CONFIG_NAMESRVADDR: rocketmq:10911
+    depends_on:
+      - rocketmq
+    networks:
+      - wher-ever-net
+
+  rocketmq-broker:
+    image: apache/rocketmq:5.1.0
+    container_name: wher-ever-rocketmq-broker
+    restart: unless-stopped
+    ports:
+      - "10911:10911"
+    environment:
+      TZ: Asia/Shanghai
+    volumes:
+      - ./rocketmq/store:/home/rocketmq/store
+      - ./rocketmq/logs:/home/rocketmq/logs
+      - ./rocketmq/conf/broker.conf:/home/rocketmq/conf/broker.conf
+    command: sh mqbroker -n rocketmq:9876 -c /home/rocketmq/conf/broker.conf
+    depends_on:
+      - rocketmq
+    networks:
+      - wher-ever-net
+
+networks:
+  wher-ever-net:
+    driver: bridge

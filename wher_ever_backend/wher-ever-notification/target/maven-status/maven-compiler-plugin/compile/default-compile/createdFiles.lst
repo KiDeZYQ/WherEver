@@ -1,0 +1,6 @@
+com\wherver\notification\dto\ReminderDto$ReminderDtoBuilder.class
+com\wherver\notification\controller\ReminderController.class
+com\wherver\notification\mapper\ReminderMapper.class
+com\wherver\notification\WherEverNotificationApplication.class
+com\wherver\notification\dto\ReminderDto.class
+com\wherver\notification\service\ReminderService.class
