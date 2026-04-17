@@ -62,7 +62,7 @@ services:
     restart: unless-stopped
     ports:
       - "9876:9876"
-      - "10911:10911"
+      # - "10911:10911"
     environment:
       TZ: Asia/Shanghai
     volumes:
