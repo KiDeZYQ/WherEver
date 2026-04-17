@@ -1,56 +1,101 @@
 # WherEver Docker Development Environment
 
-## Services
+## 目录结构
 
-| Service | Port | Description |
-|---------|------|-------------|
-| MySQL | 3306 | Database |
-| Redis | 6379 | Cache |
-| Nacos | 8848 | Service Discovery & Config |
-| RocketMQ | 9876, 10911 | Message Queue |
-| RocketMQ Dashboard | 8080 | MQ Management Console |
+```
+wher_ever_docker/
+├── docker-compose.yml          # 主编排文件
+├── README.md                  # 本文档
+├── mysql/
+│   ├── conf/my.cnf           # MySQL 配置
+│   ├── init/01-init.sql      # 数据库初始化脚本
+│   └── data/                # MySQL 数据持久化
+├── redis/
+│   ├── conf/redis.conf       # Redis 配置
+│   └── data/                # Redis 数据持久化
+├── nacos/
+│   ├── application.properties # Nacos 配置
+│   ├── data/                # Nacos 数据持久化
+│   └── logs/                # Nacos 日志
+└── rocketmq/
+    ├── conf/broker.conf     # RocketMQ Broker 配置
+    ├── store/              # 消息存储
+    └── logs/               # RocketMQ 日志
+```
 
-## Quick Start
+## 服务列表
+
+| 服务 | 镜像 | 端口 | 用途 |
+|------|------|------|------|
+| MySQL | mysql:8.0 | 3306 | 关系型数据库 |
+| Redis | redis:7-alpine | 6379 | KV 缓存 |
+| Nacos | nacos/nacos-server:v2.2.3 | 8848 | 服务注册/配置中心 |
+| RocketMQ | apache/rocketmq:5.1.0 | 9876, 10911 | 消息队列 |
+| RocketMQ Dashboard | apacherocketmq/rocketmq-dashboard | 8080 | MQ 管理界面 |
+
+## 快速启动
 
 ```bash
-# Start all services
+# 进入目录
 cd wher_ever_docker
+
+# 启动所有服务(后台运行)
 docker-compose up -d
 
-# Check status
+# 查看运行状态
 docker-compose ps
 
-# View logs
+# 实时查看日志
 docker-compose logs -f
 
-# Stop all services
+# 停止所有服务
 docker-compose down
 
-# Stop and remove volumes
+# 停止并清除数据(完全重置)
 docker-compose down -v
 ```
 
-## Verify Services
+## 服务验证
 
-### Nacos
-- Access: http://localhost:8848/nacos
-- Default credentials: nacos / nacos
+| 服务 | 访问地址 | 凭据 |
+|------|----------|------|
+| Nacos | http://localhost:8848/nacos | nacos / nacos |
+| RocketMQ Dashboard | http://localhost:8080 | - |
+| MySQL | localhost:3306 | root / root123456 |
+| Redis | localhost:6379 | 无密码 |
 
-### RocketMQ Dashboard
-- Access: http://localhost:8080
+## 配置文件说明
 
-### MySQL
-- Host: localhost:3306
-- Password: root123456
-- Database: wher_ever
+| 文件 | 作用 |
+|------|------|
+| `docker-compose.yml` | 容器编排，定义所有服务启动参数 |
+| `mysql/conf/my.cnf` | MySQL 运行参数(字符集/连接数/缓存等) |
+| `mysql/init/01-init.sql` | 首次启动自动执行的建库建表SQL |
+| `redis/conf/redis.conf` | Redis 运行参数(内存/持久化/安全等) |
+| `rocketmq/conf/broker.conf` | RocketMQ Broker 配置(集群/端口/刷盘策略) |
+| `nacos/application.properties` | Nacos 应用配置 |
 
-### Redis
-- Host: localhost:6379
-- No password
+## 数据持久化
 
-## Notes
+数据存储在 `./data/` 目录:
+- `mysql/data/` - MySQL 数据文件
+- `redis/data/` - Redis 数据文件
+- `nacos/data/` - Nacos 注册中心数据
+- `rocketmq/store/` - RocketMQ 消息存储
 
-- RocketMQ NameServer runs on port 9876
-- RocketMQ Broker runs on port 10911
-- Nacos console runs on port 8848
-- Volumes are created in `./data` directories for persistence
+## 重置环境
+
+```bash
+# 完全重置(删除容器和数据)
+docker-compose down -v
+
+# 重新启动
+docker-compose up -d
+```
+
+## 注意事项
+
+- RocketMQ NameServer 端口: 9876
+- RocketMQ Broker 端口: 10911
+- Nacos 控制台端口: 8848
+- 所有数据通过 volume 持久化到本地目录
