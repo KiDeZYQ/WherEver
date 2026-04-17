@@ -36,6 +36,8 @@ WherEver/
 
 ### 1. Start Infrastructure (Docker)
 
+**PS**: windows下需先启动docker desktop
+
 ```bash
 cd wher_ever_docker
 docker-compose up -d

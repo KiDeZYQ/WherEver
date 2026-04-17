@@ -64,6 +64,95 @@ docker-compose down -v
 | MySQL | localhost:3306 | root / root123456 |
 | Redis | localhost:6379 | 无密码 |
 
+### 快速检测所有服务状态
+
+```bash
+# 一键检测所有服务健康状态
+docker-compose ps --format "table {{.Name}}\t{{.Status}}"
+```
+
+输出示例（所有服务 UP 表示启动成功）：
+```
+NAME                        STATUS
+wher-ever-mysql             Up (healthy)
+wher-ever-redis             Up (healthy)
+wher-ever-nacos             Up (healthy)
+wher-ever-rocketmq          Up
+wher-ever-rocketmq-dashboard Up
+wher-ever-rocketmq-broker   Up
+```
+
+### 逐个服务验证
+
+**1. MySQL**
+```bash
+docker exec wher-ever-mysql mysqladmin ping -h localhost -u root -proot123456
+# 输出: mysqld is alive 表示正常
+```
+
+**2. Redis**
+```bash
+docker exec wher-ever-redis redis-cli ping
+# 输出: PONG 表示正常
+```
+
+**3. Nacos**
+```bash
+curl -s http://localhost:8848/nacos/v1/ns/instance?serviceName=nacos&ip=127.0.0.1&port=8848
+# 输出包含 ok:true 表示注册中心正常
+```
+
+**4. RocketMQ NameServer**
+```bash
+docker exec wher-ever-rocketmq sh mqadmin clusterList -n rocketmq:9876
+# 输出包含 Cluster Name 表示正常
+```
+
+**5. RocketMQ Broker**
+```bash
+docker exec wher-ever-rocketmq-broker sh mqadmin brokerStatus -n rocketmq:9876 -b rocketmq-broker
+# 输出包含 broker-runtime-pid 表示正常
+```
+
+**6. RocketMQ Dashboard**
+```bash
+curl -s http://localhost:8080
+# 返回 HTML 页面表示 Dashboard 正常
+```
+
+### 自动化检测脚本
+
+创建 `check_services.sh`：
+```bash
+#!/bin/bash
+echo "=== WherEver 服务健康检查 ==="
+
+check() {
+  local name=$1
+  local cmd=$2
+  if eval "$cmd" > /dev/null 2>&1; then
+    echo "[✓] $name - 正常"
+    return 0
+  else
+    echo "[✗] $name - 异常"
+    return 1
+  fi
+}
+
+check "MySQL" "docker exec wher-ever-mysql mysqladmin ping -h localhost -u root -proot123456"
+check "Redis" "docker exec wher-ever-redis redis-cli ping"
+check "Nacos" "curl -s http://localhost:8848/nacos/v1/ns/instance?serviceName=nacos&ip=127.0.0.1&port=8848 | grep -q ok"
+check "RocketMQ Dashboard" "curl -s http://localhost:8080 | grep -q html"
+
+echo "=== 检查完成 ==="
+```
+
+执行检测：
+```bash
+chmod +x check_services.sh
+./check_services.sh
+```
+
 ## 配置文件说明
 
 | 文件 | 作用 |
