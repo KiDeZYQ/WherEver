@@ -1,5 +1,6 @@
 package com.wherver.user.entity;
 
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.wherver.common.entity.BaseEntity;
 import lombok.Data;
@@ -7,7 +8,7 @@ import lombok.EqualsAndHashCode;
 
 @Data
 @EqualsAndHashCode(callSuper = true)
-@TableName("users")
+@TableName("sys_user")
 public class User extends BaseEntity {
 
     private String username;
@@ -18,5 +19,6 @@ public class User extends BaseEntity {
 
     private Integer subscriptionLevel; // 0=free, 1=premium
 
+    @TableField(exist = false)
     private String sessionId;
 }

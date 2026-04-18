@@ -1,12 +1,13 @@
 package com.wherver.common.entity;
 
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 @Data
 @EqualsAndHashCode(callSuper = true)
-@TableName("reminders")
+@TableName("reminder")
 public class Reminder extends BaseEntity {
 
     private Long userId;
@@ -27,5 +28,6 @@ public class Reminder extends BaseEntity {
 
     private Integer status; // 0=disabled, 1=enabled
 
+    @TableField("repeat_rule")
     private Integer repeatType; // 0=none, 1=daily, 2=weekly, 3=monthly, 4=yearly
 }
