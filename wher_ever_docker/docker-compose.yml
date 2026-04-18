@@ -45,7 +45,7 @@ services:
       MYSQL_SERVICE_PORT: 3306
       MYSQL_SERVICE_USER: root
       MYSQL_SERVICE_PASSWORD: root123456
-      MYSQL_SERVICE_DB_NAME: wher_ever
+      MYSQL_SERVICE_DB_NAME: nacos_config
       NACOS_AUTH_ENABLE: false
       TZ: Asia/Shanghai
     volumes:
@@ -78,12 +78,17 @@ services:
     container_name: wher-ever-rocketmq-dashboard
     restart: unless-stopped
     ports:
-      - "8080:8080"
+      - "8080:8082"
     environment:
       TZ: Asia/Shanghai
-      ROCKETMQ_CONFIG_NAMESRVADDR: rocketmq:10911
+      ROCKETMQ_CONFIG_NAMESRVADDR: rocketmq:9876
+      ROCKETMQ_CONFIG_VIPCHANNELENABLED: "false"
+      JAVA_OPTS: >-
+        -Drocketmq.config.namesrvAddr=rocketmq:9876
+        -Drocketmq.config.isVIPChannel=false
     depends_on:
       - rocketmq
+      - rocketmq-broker
     networks:
       - wher-ever-net
 
