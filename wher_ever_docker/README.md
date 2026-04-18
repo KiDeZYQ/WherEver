@@ -57,12 +57,102 @@ docker-compose down -v
 
 ## 服务验证
 
-| 服务 | 访问地址 | 凭据 |
-|------|----------|------|
-| Nacos | http://localhost:8848/nacos | nacos / nacos |
-| RocketMQ Dashboard | http://localhost:8080 | - |
-| MySQL | localhost:3306 | root / root123456 |
-| Redis | localhost:6379 | 无密码 |
+### Web 控制台访问
+
+| 服务 | 访问地址 | 凭据 | 验证方法 |
+|------|----------|------|----------|
+| Nacos | http://localhost:8848/nacos | nacos / nacos | 登录后显示服务列表或配置列表 |
+| RocketMQ Dashboard | http://localhost:8080 | 无 | 登录后显示 Dashboard 页面 |
+| MySQL | localhost:3306 | root / root123456 | 连接成功，可查询数据库 |
+
+### 1. Nacos 验证
+
+**浏览器访问**: http://localhost:8848/nacos
+
+1. 打开浏览器访问上述地址
+2. 默认账号: `nacos`，密码: `nacos`
+3. 登录后应看到 Nacos 控制台界面
+
+**API 验证**:
+```bash
+# 检查 Nacos 健康状态
+curl -s http://localhost:8848/nacos/v1/ns/instance?serviceName=nacos&ip=127.0.0.1&port=8848
+# 返回 {"enabled":true,"ephemeral":true,"clusterName":"DEFAULT","serviceName":"nacos","ip":"127.0.0.1","port":8848,"weight":1}
+
+# 检查服务列表
+curl -s http://localhost:8848/nacos/v1/ns/instance/list
+```
+
+### 2. RocketMQ Dashboard 验证
+
+**浏览器访问**: http://localhost:8080
+
+1. 打开浏览器访问上述地址
+2. 无需登录，直接进入 Dashboard 主页
+3. 点击左侧 "Dashboard" 查看集群状态
+
+**日志验证**:
+```bash
+# 检查 Dashboard 日志无报错
+docker-compose logs rocketmq-dashboard | grep -E "RemotingConnectException|10909"
+# 无输出表示正常（VIP 通道已禁用）
+
+# 检查 Dashboard 正常运行
+docker-compose logs rocketmq-dashboard | grep "Started App"
+# 应显示类似: Started App in x seconds
+```
+
+### 3. MySQL 验证
+
+**命令行连接**:
+```bash
+docker exec wher-ever-mysql mysql -uroot -proot123456 -e "SHOW DATABASES;"
+```
+
+**预期输出**:
+```
+Database
+information_schema
+mysql
+nacos_config
+performance_schema
+sys
+wher_ever
+```
+
+**验证 Nacos 数据库表**:
+```bash
+docker exec wher-ever-mysql mysql -uroot -proot123456 -e "USE nacos_config; SHOW TABLES;"
+```
+
+**预期输出**:
+```
+Tables_in_nacos_config
+config_info
+config_info_aggr
+config_info_beta
+config_info_tag
+config_tags_relation
+group_capacity
+his_config_info
+permissions
+roles
+tenant_capacity
+tenant_info
+users
+```
+
+### 4. RocketMQ 完整验证
+
+**NameServer 状态**:
+```bash
+docker exec wher-ever-rocketmq sh mqadmin clusterList -n rocketmq:9876
+```
+
+**Broker 状态**:
+```bash
+docker exec wher-ever-rocketmq-broker sh mqadmin brokerStatus -n rocketmq:9876 -b broker-auto
+```
 
 ### 快速检测所有服务状态
 
@@ -73,21 +163,21 @@ docker-compose ps --format "table {{.Name}}\t{{.Status}}"
 
 输出示例（所有服务 UP 表示启动成功）：
 ```
-NAME                        STATUS
-wher-ever-mysql             Up (healthy)
-wher-ever-redis             Up (healthy)
-wher-ever-nacos             Up (healthy)
-wher-ever-rocketmq          Up
-wher-ever-rocketmq-dashboard Up
-wher-ever-rocketmq-broker   Up
+NAME                           STATUS
+wher-ever-mysql                Up
+wher-ever-redis                Up
+wher-ever-nacos                Up
+wher-ever-rocketmq             Up
+wher-ever-rocketmq-broker      Up
+wher-ever-rocketmq-dashboard   Up
 ```
 
 ### 逐个服务验证
 
 **1. MySQL**
 ```bash
-docker exec wher-ever-mysql mysqladmin ping -h localhost -u root -proot123456
-# 输出: mysqld is alive 表示正常
+docker exec wher-ever-mysql mysql -uroot -proot123456 -e "SELECT 1;"
+# 输出: Query OK 表示正常
 ```
 
 **2. Redis**
@@ -98,59 +188,13 @@ docker exec wher-ever-redis redis-cli ping
 
 **3. Nacos**
 ```bash
-curl -s http://localhost:8848/nacos/v1/ns/instance?serviceName=nacos&ip=127.0.0.1&port=8848
-# 输出包含 ok:true 表示注册中心正常
+curl -s http://localhost:8848/nacos/v1/ns/instance?serviceName=nacos&ip=127.0.0.1&port=8848 | grep ok
 ```
 
-**4. RocketMQ NameServer**
+**4. RocketMQ Dashboard**
 ```bash
-docker exec wher-ever-rocketmq sh mqadmin clusterList -n rocketmq:9876
-# 输出包含 Cluster Name 表示正常
-```
-
-**5. RocketMQ Broker**
-```bash
-docker exec wher-ever-rocketmq-broker sh mqadmin brokerStatus -n rocketmq:9876 -b rocketmq-broker
-# 输出包含 broker-runtime-pid 表示正常
-```
-
-**6. RocketMQ Dashboard**
-```bash
-curl -s http://localhost:8080
-# 返回 HTML 页面表示 Dashboard 正常
-```
-
-### 自动化检测脚本
-
-创建 `check_services.sh`：
-```bash
-#!/bin/bash
-echo "=== WherEver 服务健康检查 ==="
-
-check() {
-  local name=$1
-  local cmd=$2
-  if eval "$cmd" > /dev/null 2>&1; then
-    echo "[✓] $name - 正常"
-    return 0
-  else
-    echo "[✗] $name - 异常"
-    return 1
-  fi
-}
-
-check "MySQL" "docker exec wher-ever-mysql mysqladmin ping -h localhost -u root -proot123456"
-check "Redis" "docker exec wher-ever-redis redis-cli ping"
-check "Nacos" "curl -s http://localhost:8848/nacos/v1/ns/instance?serviceName=nacos&ip=127.0.0.1&port=8848 | grep -q ok"
-check "RocketMQ Dashboard" "curl -s http://localhost:8080 | grep -q html"
-
-echo "=== 检查完成 ==="
-```
-
-执行检测：
-```bash
-chmod +x check_services.sh
-./check_services.sh
+curl -s http://localhost:8080 | head -1
+# 输出 HTML 表示正常
 ```
 
 ## 配置文件说明
@@ -184,7 +228,10 @@ docker-compose up -d
 
 ## 注意事项
 
+- RocketMQ Dashboard 端口映射: `8080:8082`（宿主机 8080 → 容器 8082）
 - RocketMQ NameServer 端口: 9876
 - RocketMQ Broker 端口: 10911
 - Nacos 控制台端口: 8848
+- RocketMQ Dashboard 访问: http://localhost:8080
+- RocketMQ VIP 通道默认启用，如遇连接错误 `connect to xxxx:10909 failed`，需设置环境变量 `ROCKETMQ_CONFIG_VIPCHANNELENABLED=false`
 - 所有数据通过 volume 持久化到本地目录
