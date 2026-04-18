@@ -1,1 +1,7 @@
 .claude/
+wher_ever_docker/mysql/data/
+wher_ever_docker/nacos/data/
+wher_ever_docker/nacos/logs/
+wher_ever_docker/redis/data/
+wher_ever_docker/rocketmq/logs/
+wher_ever_docker/rocketmq/store/
